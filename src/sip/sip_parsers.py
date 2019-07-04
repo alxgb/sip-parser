@@ -14,23 +14,28 @@ COMPACT_HEADERS = {
     "s": "subject",
     "k": "supported",
     "t": "to",
-    "v": "via"
+    "v": "via",
 }
+
 
 def parse_params(data):
     """ Parse the parameters of the header, separated by semicolons (;) """
 
     params = {}
     while True:
-        m = re.match(r'\s*;\s*([\w\-.!%*_+`\'~]+)(?:\s*=\s*([\w\-.!%*_+`\'~]+|"[^"\\]*(\\.[^"\\]*)*"))?', data)
-        if not m: # We're done matching
+        m = re.match(
+            r'\s*;\s*([\w\-.!%*_+`\'~]+)(?:\s*=\s*([\w\-.!%*_+`\'~]+|"[^"\\]*(\\.[^"\\]*)*"))?',
+            data,
+        )
+        if not m:  # We're done matching
             break
 
         params[m.group(1).lower()] = m.group(2)
-        data = data[m.end():]
+        data = data[m.end() :]
 
     # Return the list of parameters AND the leftover data
     return params, data
+
 
 def parse_multiheader(parse_fn: Callable, data: str) -> Tuple[List, str]:
     """ Parse a header that can have multiple values in comma-separated times within the same header line.
@@ -46,30 +51,32 @@ def parse_multiheader(parse_fn: Callable, data: str) -> Tuple[List, str]:
         # If there's leftover data, this is probably a multi header
         while True:
             # Find a comma at the start, and discard it, then parse the header
-            m = re.match(r'^\s*,\s*', data)
+            m = re.match(r"^\s*,\s*", data)
             if not m:
-                break # ... until no more commas exist
+                break  # ... until no more commas exist
 
-            header, data = parse_fn(data[m.end():])
+            header, data = parse_fn(data[m.end() :])
             values.append(header)
 
     return values, data
+
 
 def parse_via(data: str):
     m = re.match(r"SIP\s*\/\s*(\d+\.\d+)\s*\/\s*([\S]+)\s+([^\s;:]+)(?:\s*:\s*(\d+))?", data)
     if not m:
         raise RuntimeError("Could not parse Via header!")
 
-    params, data = parse_params(data[m.end():])
+    params, data = parse_params(data[m.end() :])
     val = {
-        "version": m.group(1), # Can be None!
+        "version": m.group(1),  # Can be None!
         "protocol": m.group(2),
         "host": m.group(3),
         "port": int(m.group(4)) if m.group(4) else None,
-        "params": params
+        "params": params,
     }
 
     return val, data
+
 
 def parse_auth_header_with_scheme(data: str):
     """ Parse an auth header that begins with a scheme """
@@ -77,30 +84,34 @@ def parse_auth_header_with_scheme(data: str):
     if not sch_match:
         raise RuntimeError("Could not extract scheme from authentication header")
 
-    val, data = parse_auth_header(data[sch_match.end():])
+    val, data = parse_auth_header(data[sch_match.end() :])
     val["scheme"] = sch_match.group(1)
 
     return val, data
+
 
 def parse_auth_header(data: str):
     """ Parse an auth header (without a prefix scheme) """
     val = {}
     while True:
         m = re.match(r'([^\s,"=]*)\s*=\s*([^\s,"]+|"[^"\\]*(?:\\.[^"\\]*)*")\s*', data)
-        if not m: # We're done processing
+        if not m:  # We're done processing
             break
 
         # Extract the rest of the information, one by one
         val[m.group(1)] = m.group(2)
-        data = data[m.end():]
+        data = data[m.end() :]
 
         # There must be a comma now, or we're done
         if not data or data[0] != ",":
             break
 
-        data = data[1:].lstrip() # Skip the comma and strip whitespace right after the comma and before the data
+        data = data[
+            1:
+        ].lstrip()  # Skip the comma and strip whitespace right after the comma and before the data
 
     return val, data
+
 
 def parse_cseq(data: str) -> Dict[str, Any]:
     """ Parses a CSeq header value (<number> <method>)"""
@@ -108,17 +119,18 @@ def parse_cseq(data: str) -> Dict[str, Any]:
     if not m:
         raise RuntimeError("Could not parse CSeq header")
 
-    return {
-        "seq": int(m.group(1)),
-        "method": urllib.parse.unquote(m.group(2))
-    }
+    return {"seq": int(m.group(1)), "method": urllib.parse.unquote(m.group(2))}
+
 
 def parse_aor(data: str):
     """ Parses an Address Of Record """
 
-    aor_match = re.match(r'((?:[\w\-.!%*_+`\'~]+)(?:\s+[\w\-.!%*_+`\'~]+)*|"[^"\\]*(?:\\.[^"\\]*)*")?\s*\<\s*([^>]*)\s*\>|((?:[^\s@"<]@)?[^\s;]+)', data)
+    aor_match = re.match(
+        r'((?:[\w\-.!%*_+`\'~]+)(?:\s+[\w\-.!%*_+`\'~]+)*|"[^"\\]*(?:\\.[^"\\]*)*")?\s*\<\s*([^>]*)\s*\>|((?:[^\s@"<]@)?[^\s;]+)',
+        data,
+    )
     if not aor_match:
-        raise RuntimeError("Invalid AOR found: \"%s\"" % data)
+        raise RuntimeError('Invalid AOR found: "%s"' % data)
 
     name = aor_match.group(1)
     uri = ""
@@ -127,21 +139,21 @@ def parse_aor(data: str):
     elif aor_match.group(3):
         uri = aor_match.group(3)
 
-    params, data = parse_params(data[aor_match.end():])
-    props = {
-        "name": name, # Can be None!
-        "uri": uri,
-        "params": params
-    }
+    params, data = parse_params(data[aor_match.end() :])
+    props = {"name": name, "uri": uri, "params": params}  # Can be None!
 
     # Return the extracted header and leftover data
     return props, data
 
+
 def parse_uri(uri: str):
     """ Breaks down a URI into its different components """
-    m = re.match(r"^(sips?):(?:([^\s>:@]+)(?::([^\s@>]+))?@)?([\w\-\.]+)(?::(\d+))?((?:;[^\s=\?>;]+(?:=[^\s?\;]+)?)*)(?:\?(([^\s&=>]+=[^\s&=>]+)(&[^\s&=>]+=[^\s&=>]+)*))?$", uri)
+    m = re.match(
+        r"^(sips?):(?:([^\s>:@]+)(?::([^\s@>]+))?@)?([\w\-\.]+)(?::(\d+))?((?:;[^\s=\?>;]+(?:=[^\s?\;]+)?)*)(?:\?(([^\s&=>]+=[^\s&=>]+)(&[^\s&=>]+=[^\s&=>]+)*))?$",
+        uri,
+    )
     if not m:
-        raise RuntimeError("Could not parse URI: \"%s\"" % uri)
+        raise RuntimeError('Could not parse URI: "%s"' % uri)
 
     # Extract params
     params: Dict[str, Optional[str]] = {}
@@ -177,6 +189,7 @@ def parse_uri(uri: str):
         "headers": headers,
     }
 
+
 def parse_aor_with_uri(data: str) -> Tuple[Dict, str]:
     """ Parses AOR and then parses the URI that we extracted """
     props, data = parse_aor(data)
@@ -186,16 +199,18 @@ def parse_aor_with_uri(data: str) -> Tuple[Dict, str]:
     props["uri"] = parse_uri(props["uri"])
     return props, data
 
+
 def parse_response(lines: List[str]) -> Optional[Dict[str, Any]]:
-    res_match = re.match(r'^SIP\/(\d+\.\d+)\s+(\d+)\s*(.*)\s*$', lines[0])
+    res_match = re.match(r"^SIP\/(\d+\.\d+)\s+(\d+)\s*(.*)\s*$", lines[0])
     if not res_match:
         return None
 
     return {
         "version": res_match.group(1),
         "status": int(res_match.group(2)),
-        "reason": res_match.group(3)
+        "reason": res_match.group(3),
     }
+
 
 def parse_request(lines: List[str]) -> Optional[Dict[str, Any]]:
     req_match = re.match(r"^([\w\-.!%*_+`'~]+)\s([^\s]+)\sSIP\s*\/\s*(\d+\.\d+)", lines[0])
