@@ -2,7 +2,7 @@
 
 This is a small pet project designed to fill the surprising lack (as of writing and to my knowledge) of any sort of standalone sip & msrp parser in Python.
 
-The parser tries to be somewhat exhaustive, but may fail in certain edge cases, like the SIP Torture Test Messages in RFC 4475. Most of the SIP parser is actually a Python port of the Javascript one used by [sip.js](https://github.com/kirm/sip.js), with some tweaks here and there to better parse some complex headers.
+The parser tries to be somewhat exhaustive, but may fail in certain edge cases, like the SIP Torture Test Messages in RFC 4475. Most of the SIP parser is actually a Python port of the Javascript one used by [sip.js](https://github.com/kirm/sip.js), with a couple tweaks to better parse some complex headers.
 
 There are a few tests written using pylint (which don't cover all situations, and can certainly be extended). The tests can be run from the project root by simply executing `pytest`.
 

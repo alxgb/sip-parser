@@ -127,3 +127,18 @@ def test_via_header_parsing():
     assert via["params"]["branch"] == "4y479aZgQ6b15d63F"
     assert "rport" in via["params"] and via["params"]["rport"] is None
 
+
+def test_route_with_no_port():
+    msg = """\
+        METHOD irrelevant SIP/2.0
+        Route: <sip:services.example.com;lr;unknownwith=value;unknown-no-value>
+
+        """
+
+    sip_msg = SipMessage()
+    sip_msg.parse(prepare_msg(msg))
+
+    assert sip_msg.type == SipMessage.TYPE_REQUEST
+    assert len(sip_msg.headers) == 1
+    assert sip_msg.headers["route"][0]["uri"]["port"] is None
+

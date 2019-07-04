@@ -159,14 +159,22 @@ def parse_uri(uri: str):
         for header_m in re.finditer(r"([^&=]+)=([^&=]+)", m.group(7)):
             headers[header_m.group(1)] = header_m.group(2)
 
+    if m.group(5):
+        try:
+            port = int(m.group(5))
+        except ValueError:
+            raise RuntimeError("Invalid port in route (couldn't cast to a valid int)")
+    else:
+        port = None
+
     return {
         "schema": m.group(1),
         "user": m.group(2),
         "password": m.group(3),
         "host": m.group(4),
-        "port": int(m.group(5)),
+        "port": port,
         "params": params,
-        "headers": headers
+        "headers": headers,
     }
 
 def parse_aor_with_uri(data: str) -> Tuple[Dict, str]:
