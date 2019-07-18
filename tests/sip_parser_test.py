@@ -128,6 +128,56 @@ def test_via_header_parsing():
     assert "rport" in via["params"] and via["params"]["rport"] is None
 
 
+def test_route_header_parsing():
+    msg = """\
+        METHOD irrelevant SIP/2.0
+        Route: <sip:127.0.0.1:5060;lr>
+
+        """
+
+    sip_msg = SipMessage()
+    sip_msg.parse(prepare_msg(msg))
+
+    assert sip_msg.type == SipMessage.TYPE_REQUEST
+    assert len(sip_msg.headers) == 1
+    route = sip_msg.headers["route"][0]
+    assert route["uri"]["schema"] == "sip"
+    assert route["uri"]["user"] is None
+    assert route["uri"]["password"] is None
+    assert route["uri"]["host"] == "127.0.0.1"
+    assert route["uri"]["port"] == 5060
+    assert route["uri"]["params"]["lr"] is None
+    assert not route["params"]
+
+
+def test_multiroute_header_parsing():
+    msg = """\
+        METHOD irrelevant SIP/2.0
+        Route: <sip:10.0.0.1:5061;lr>
+        Route: <sip:uuu:ppp@127.0.0.1:5060;aaaa>
+
+        """
+
+    sip_msg = SipMessage()
+    sip_msg.parse(prepare_msg(msg))
+
+    assert sip_msg.type == SipMessage.TYPE_REQUEST
+    assert len(sip_msg.headers) == 1
+    # Make sure we're properly differentiating both URIs
+    assert sip_msg.headers["route"][0]["uri"]["host"] == "10.0.0.1"
+    route2 = sip_msg.headers["route"][1]
+
+    # Verify we got all values on the 2nd one right
+    assert route2["uri"]["schema"] == "sip"
+    assert route2["uri"]["user"] == "uuu"
+    assert route2["uri"]["password"] == "ppp"
+    assert route2["uri"]["host"] == "127.0.0.1"
+    assert route2["uri"]["port"] == 5060
+    assert len(route2["uri"]["params"].keys()) == 1
+    assert route2["uri"]["params"]["aaaa"] is None
+    assert not route2["params"]
+
+
 def test_route_with_no_port():
     msg = """\
         METHOD irrelevant SIP/2.0
@@ -142,3 +192,64 @@ def test_route_with_no_port():
     assert len(sip_msg.headers) == 1
     assert sip_msg.headers["route"][0]["uri"]["port"] is None
 
+
+def test_tortuous_invite_parsing():
+    # RFC 4475 "A Short Tortuous INVITE"
+    # Note: Every \ has been escaped again to prevent Python string escaping breaking
+    # the original escaping
+
+    msg = """\
+        INVITE sip:vivekg@chair-dnrc.example.com;unknownparam SIP/2.0
+        TO :
+         sip:vivekg@chair-dnrc.example.com ;   tag    = 1918181833n
+        from   : "J Rosenberg \\\\\\""         <sip:jdrosen@example.com>
+          ;
+          tag = 98asjd8
+        MaX-fOrWaRdS: 0068
+        Call-ID: wsinv.ndaksdj@192.0.2.1
+        Content-Length   : 150
+        cseq: 0009
+          INVITE
+        Via  : SIP  /   2.0
+         /UDP
+            192.0.2.2;branch=390skdjuw
+        s :
+        NewFangledHeader:   newfangled value
+         continued newfangled value
+        UnknownHeaderWithUnusualValue: ;;,,;;,;
+        Content-Type: application/sdp
+        Route:
+         <sip:services.example.com;lr;unknownwith=value;unknown-no-value>
+        v:  SIP  / 2.0  / TCP     spindle.example.com   ;
+          branch  =   z9hG4bK9ikj8  ,
+         SIP  /    2.0   / UDP  192.168.255.111   ; branch=
+         z9hG4bK30239
+        m:"Quoted string \\"\\"" <sip:jdrosen@example.com> ; newparam =
+                newvalue ;
+          secondparam ; q = 0.33
+
+        v=0
+        o=mhandley 29739 7272939 IN IP4 192.0.2.3
+        s=-
+        c=IN IP4 192.0.2.4
+        t=0 0
+        m=audio 49217 RTP/AVP 0 12
+        m=video 3227 RTP/AVP 31
+        a=rtpmap:31 LPC
+    """
+
+    sip_msg = SipMessage()
+    sip_msg.parse(prepare_msg(msg))
+
+    assert sip_msg.method == "INVITE"
+    assert len(sip_msg.headers) == 13  # Via is declared twice
+    assert len(sip_msg.headers["via"]) == 3
+    contact = sip_msg.headers["contact"][0]
+    assert contact["name"] == '"Quoted string \\"\\""'
+    assert contact["params"]["q"] == "0.33"
+    assert contact["params"]["newparam"] == "newvalue"
+    assert contact["params"]["secondparam"] is None
+    assert sip_msg.headers["via"][0]["protocol"] == "UDP"
+    assert sip_msg.headers["via"][1]["protocol"] == "TCP"
+    assert sip_msg.headers["via"][2]["protocol"] == "UDP"
+    assert sip_msg.headers["from"]["params"]["tag"] == "98asjd8"
