@@ -1,9 +1,8 @@
 from typing import List, Dict, Any, Optional, Union
 
-# pylint: disable=relative-beyond-top-level; VSCode is dumb and can't understand the project structure
 import urllib
 import re
-from .sip_parsers import (
+from .helpers.sip_parsers import (
     COMPACT_HEADERS,
     parse_params,
     parse_multiheader,

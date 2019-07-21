@@ -1,5 +1,5 @@
 import textwrap
-from src.sip.sip_message import SipMessage
+from src.sip_message import SipMessage
 
 
 def prepare_msg(msg: str):

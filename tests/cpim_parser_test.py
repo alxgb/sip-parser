@@ -1,6 +1,6 @@
 import textwrap
-from src.msrp.msrp_message import MsrpMessage, MsrpParseError
-from src.msrp.cpim_message import CpimMessage
+from src.msrp_message import MsrpMessage, MsrpParseError
+from src.cpim_message import CpimMessage
 import pytest
 
 
