@@ -1,0 +1,2 @@
+class SdpParseError(Exception):
+    pass
