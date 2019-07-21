@@ -1,7 +1,10 @@
 import re
 
-# pylint: disable=relative-beyond-top-level; VSCode is dumb and can't understand the project structure
-from .msrp_message import HEADER_REGEX, MsrpParseError
+HEADER_REGEX = r"([\w\-\.]+):\s*(.*)"
+
+
+class CpimParseError(Exception):
+    pass
 
 
 class CpimMessage:
@@ -12,8 +15,12 @@ class CpimMessage:
         self.content = {"headers": {}, "body": []}
 
     @staticmethod
-    def from_lines(lines):
-        """ Generate a CpimMessage structure based on a given message """
+    def from_string(message):
+        """ Generate a CpimMessage structure based on a given message string """
+        lines = [line.strip() for line in message.split("\n")]
+        if not lines or len(lines) == 1 and not lines[0]:
+            raise CpimParseError("Empty CPIM message")
+
         cpim_m = CpimMessage()
         for h_line_num, line in enumerate(lines):
             # First come the headers until a linebreak is found
@@ -22,8 +29,8 @@ class CpimMessage:
 
             m = re.match(HEADER_REGEX, line)
             if not m:
-                raise MsrpParseError(
-                    f"Expected header while parsing CPIM message (line {h_line_num+1}, {line})"
+                raise CpimParseError(
+                    f"Valid header not found while parsing CPIM message (line {h_line_num+1}: {line})"
                 )
 
             cpim_m.headers[m.group(1)] = m.group(2)
@@ -36,7 +43,7 @@ class CpimMessage:
 
             m = re.match(HEADER_REGEX, line)
             if not m:
-                raise MsrpParseError(
+                raise CpimParseError(
                     f"Expected header while parsing CPIM's message body (line {c_line_num+1}, {line})"
                 )
 
