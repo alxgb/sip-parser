@@ -1,5 +1,5 @@
 import textwrap
-from src.msrp_message import MsrpMessage, MsrpParseError
+from sip_parser.msrp_message import MsrpMessage, MsrpParseError
 import pytest
 
 

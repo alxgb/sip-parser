@@ -1,5 +1,5 @@
 import textwrap
-from src.cpim_message import CpimMessage, CpimParseError
+from sip_parser.cpim_message import CpimMessage, CpimParseError
 import pytest
 
 
