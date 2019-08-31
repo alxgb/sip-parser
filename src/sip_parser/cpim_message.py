@@ -14,14 +14,14 @@ class CpimMessage:
         self.headers = {}
         self.content = {"headers": {}, "body": []}
 
-    @staticmethod
-    def from_string(message):
+    @classmethod
+    def from_string(cls, message: str):
         """ Generate a CpimMessage structure based on a given message string """
         lines = [line.strip() for line in message.split("\n")]
         if not lines or len(lines) == 1 and not lines[0]:
             raise CpimParseError("Empty CPIM message")
 
-        cpim_m = CpimMessage()
+        cpim_m = cls()
         for h_line_num, line in enumerate(lines):
             # First come the headers until a linebreak is found
             if line == "":
@@ -30,7 +30,7 @@ class CpimMessage:
             m = re.match(HEADER_REGEX, line)
             if not m:
                 raise CpimParseError(
-                    f"Valid header not found while parsing CPIM message (line {h_line_num+1}: {line})"
+                    f"Invalid header found while parsing CPIM message (line {h_line_num+1}: {line})"
                 )
 
             cpim_m.headers[m.group(1)] = m.group(2)
