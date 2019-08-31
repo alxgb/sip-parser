@@ -18,9 +18,9 @@ class MsrpMessage:
         self.content = None
 
     @classmethod
-    def from_string(cls, message: str):
+    def from_string(cls, raw_message: str):
         """ Generate a MsrpMessage structure based on a given message """
-        lines = [line.strip() for line in message.split("\n")]
+        lines = [line.strip() for line in raw_message.split("\n")]
         message = cls()
 
         # Fetch the header information (space-separated)
