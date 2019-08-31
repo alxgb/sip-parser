@@ -43,7 +43,10 @@ def stringify_version(version: Any):
 
 
 def stringify_aor(aor: Dict):
-    return f'{aor.get("name") or ""} <{stringify_uri(aor["uri"])}>{stringify_params(aor["params"])}'
+    aor_str = (
+        f'{aor.get("name") or ""} <{stringify_uri(aor["uri"])}>{stringify_params(aor["params"])}'
+    )
+    return aor_str.strip()
 
 
 def stringify_via(all_via: List):
