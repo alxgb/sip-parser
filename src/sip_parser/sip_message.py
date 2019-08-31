@@ -37,8 +37,13 @@ class SipMessage:
         # Headers
         self.headers: Dict[str, Any] = {}
 
-    def parse(self, data: str):
-        """ Parses a message contained in data into this class """
+    @classmethod
+    def from_string(cls, data: str):
+        """ Parses a message contained in data and produces
+            a class instance with values based off of it
+        """
+
+        message = cls()
 
         # Split header/content (header > 2 linebreaks > content)
         parts = re.match(r"^\s*([\S\s]*?)\r\n\r\n([\S\s]*)$", data)
@@ -47,7 +52,7 @@ class SipMessage:
                 "Invalid SIP message format, couldn't find header/body division (header must be followed by 2 linebreaks)"
             )
 
-        self.content = parts.group(2)
+        message.content = parts.group(2)
         lines = re.split(r"\r\n(?![ \t])", parts.group(1))
         if not lines:  # Empty message
             return
@@ -56,20 +61,20 @@ class SipMessage:
         response_parsed = parse_response(lines)
         if response_parsed:
             # Yes, it is a response
-            self.type = self.TYPE_RESPONSE
-            self.version = response_parsed["version"]
-            self.status = response_parsed["status"]
-            self.reason = response_parsed["reason"]
+            message.type = message.TYPE_RESPONSE
+            message.version = response_parsed["version"]
+            message.status = response_parsed["status"]
+            message.reason = response_parsed["reason"]
         else:
             # We couldn't parse it as a response, it must be a request
             request_parsed = parse_request(lines)
             if not request_parsed:
                 raise RuntimeError("Invalid SIP message to parse, neither a response nor a request")
 
-            self.type = self.TYPE_REQUEST
-            self.version = request_parsed["version"]
-            self.method = request_parsed["method"]
-            self.uri = request_parsed["uri"]
+            message.type = message.TYPE_REQUEST
+            message.version = request_parsed["version"]
+            message.method = request_parsed["method"]
+            message.uri = request_parsed["uri"]
 
         # Parse the headers
         for line in lines[1:]:
@@ -81,7 +86,9 @@ class SipMessage:
             if name in COMPACT_HEADERS:
                 name = COMPACT_HEADERS[name]  # Uncompress shorteners
 
-            self.add_header_from_str(name, header_match.group(2))
+            message.add_header_from_str(name, header_match.group(2))
+
+        return message
 
     def add_multi_header_from_str(self, name: str, raw_val: str):
         """ Extends or creates a multi-header

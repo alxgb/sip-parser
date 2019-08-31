@@ -27,8 +27,7 @@ def test_basic_register_message():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
 
     assert sip_msg.type == SipMessage.TYPE_REQUEST
     assert sip_msg.version == "2.0"
@@ -50,8 +49,8 @@ def test_header_parsing_case():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
+
     assert len(sip_msg.headers) == 3
     assert sip_msg.headers["via"]
     assert sip_msg.headers["cseq"]["seq"] == 65
@@ -72,8 +71,8 @@ def test_header_parsing_spaces():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
+
     assert len(sip_msg.headers) == 4
     assert sip_msg.headers["via"]
     assert sip_msg.headers["via"][0]["protocol"] == "TCP"
@@ -98,8 +97,7 @@ def test_multiline_headers():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
     assert len(sip_msg.headers) == 4
     assert sip_msg.headers["cseq"]["seq"] == 42
     assert sip_msg.headers["max-forwards"] == 1257
@@ -114,8 +112,7 @@ def test_via_header_parsing():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
 
     assert sip_msg.type == SipMessage.TYPE_REQUEST
     assert len(sip_msg.headers) == 1
@@ -135,8 +132,7 @@ def test_route_header_parsing():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
 
     assert sip_msg.type == SipMessage.TYPE_REQUEST
     assert len(sip_msg.headers) == 1
@@ -158,8 +154,7 @@ def test_multiroute_header_parsing():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
 
     assert sip_msg.type == SipMessage.TYPE_REQUEST
     assert len(sip_msg.headers) == 1
@@ -185,9 +180,7 @@ def test_route_with_no_port():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
-
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
     assert sip_msg.type == SipMessage.TYPE_REQUEST
     assert len(sip_msg.headers) == 1
     assert sip_msg.headers["route"][0]["uri"]["port"] is None
@@ -238,8 +231,7 @@ def test_tortuous_invite_parsing():
         a=rtpmap:31 LPC
     """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
 
     assert sip_msg.method == "INVITE"
     assert len(sip_msg.headers) == 13  # Via is declared twice

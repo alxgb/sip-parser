@@ -21,12 +21,8 @@ def test_basic_stringify():
         """
 
     original_message = prepare_msg(msg)
-
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
-
-    sip_msg2 = SipMessage()
-    sip_msg2.parse(sip_msg.stringify())
+    sip_msg = SipMessage.from_string(original_message)
+    sip_msg2 = SipMessage.from_string(sip_msg.stringify())
 
     assert sip_msg.stringify() == sip_msg2.stringify()
     assert sip_msg.stringify() == original_message
@@ -54,11 +50,9 @@ def test_full_message_stringify():
         """
 
     original_message = prepare_msg(msg)
-    sip_msg = SipMessage()
-    sip_msg.parse(original_message)
+    sip_msg = SipMessage.from_string(original_message)
+    sip_msg2 = SipMessage.from_string(sip_msg.stringify())
 
-    sip_msg2 = SipMessage()
-    sip_msg2.parse(sip_msg.stringify())
     assert sip_msg.stringify() == sip_msg2.stringify()
     assert sip_msg.stringify() == original_message
 
@@ -74,11 +68,8 @@ def test_stringify_multiple_routes_one_header():
         """
 
     original_message = prepare_msg(msg)
-    sip_msg = SipMessage()
-    sip_msg.parse(original_message)
-
-    sip_msg2 = SipMessage()
-    sip_msg2.parse(sip_msg.stringify())
+    sip_msg = SipMessage.from_string(original_message)
+    sip_msg2 = SipMessage.from_string(sip_msg.stringify())
 
     assert sip_msg.stringify() == sip_msg2.stringify()
     assert sip_msg.stringify() == original_message
@@ -97,10 +88,7 @@ def test_stringify_multiple_route_headers():
 
         """
 
-    sip_msg = SipMessage()
-    sip_msg.parse(prepare_msg(msg))
-
-    sip_msg2 = SipMessage()
-    sip_msg2.parse(sip_msg.stringify())
+    sip_msg = SipMessage.from_string(prepare_msg(msg))
+    sip_msg2 = SipMessage.from_string(sip_msg.stringify())
 
     assert sip_msg.stringify() == sip_msg2.stringify()
