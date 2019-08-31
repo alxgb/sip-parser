@@ -17,6 +17,8 @@ from .helpers.sip_parsers import (
     parse_request,
 )
 
+from .helpers.sip_stringifiers import stringify_header, stringify_uri, prettify_header_name
+
 
 class SipMessage:
     TYPE_REQUEST = 0
@@ -36,6 +38,8 @@ class SipMessage:
         self.headers: Dict[str, Any] = {}
 
     def parse(self, data: str):
+        """ Parses a message contained in data into this class """
+
         # Split header/content (header > 2 linebreaks > content)
         parts = re.match(r"^\s*([\S\s]*?)\r\n\r\n([\S\s]*)$", data)
         if not parts:
@@ -77,9 +81,9 @@ class SipMessage:
             if name in COMPACT_HEADERS:
                 name = COMPACT_HEADERS[name]  # Uncompress shorteners
 
-            self.add_header(name, header_match.group(2))
+            self.add_header_from_str(name, header_match.group(2))
 
-    def add_multi_header(self, name: str, raw_val: str):
+    def add_multi_header_from_str(self, name: str, raw_val: str):
         """ Extends or creates a multi-header
             Some headers (e.g Contact) can occur multiple times in the message, and must be parsed into a list of ocurrences.
         """
@@ -101,6 +105,8 @@ class SipMessage:
             "proxy-authorization",
         ):
             values, data = parse_multiheader(parse_auth_header_with_scheme, raw_val)
+        else:
+            raise RuntimeError(f"Don't know how to process header {name} as a multi-header")
 
         # Make sure there's no leftover data after parsing (either we parsed wrong or the header is invalid, either way - bad)
         if data:
@@ -112,7 +118,8 @@ class SipMessage:
 
         self.headers[name].extend(values)
 
-    def add_header(self, name: str, data: str):
+    def add_header_from_str(self, name: str, data: str):
+        # These headers can appear multiple times in a single message
         if name in (
             "contact",
             "route",
@@ -124,8 +131,7 @@ class SipMessage:
             "authorization",
             "proxy-authorization",
         ):
-            # All these can be multi-value headers
-            self.add_multi_header(name, data)
+            self.add_multi_header_from_str(name, data)
         elif name in ("to", "from", "refer-to"):
             val, _ = parse_aor(data)
             self.headers[name] = val
@@ -143,6 +149,28 @@ class SipMessage:
                 self.headers[name] += "," + data
             else:
                 self.headers[name] = data
+
+    def stringify(self):
+        ver = self.version if self.version else "2.0"
+        if self.type == self.TYPE_RESPONSE:
+            msg_str = f"SIP/{ver} {self.status} {self.reason}\r\n"
+        else:
+            uri = stringify_uri(self.uri)
+            msg_str = f"{self.method} {uri} SIP/{ver}\r\n"
+
+        self.headers["content-length"] = len(self.content) or 0
+        for header_name, header_data in self.headers.items():
+            if header_data is None:
+                continue
+
+            msg_str += stringify_header(header_name, header_data) + "\r\n"
+
+        msg_str += "\r\n"
+
+        if self.content:
+            msg_str += self.content
+
+        return msg_str
 
     def debug_print(self):
         import pprint
