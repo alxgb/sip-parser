@@ -42,11 +42,12 @@ def stringify_version(version: Any):
     return str(version) or "2.0"
 
 
-def stringify_aor(aor: Dict):
-    aor_str = (
-        f'{aor.get("name") or ""} <{stringify_uri(aor["uri"])}>{stringify_params(aor["params"])}'
-    )
-    return aor_str.strip()
+def stringify_aor(aor: Union[Dict, str]):
+    if isinstance(aor, str):
+        return aor
+
+    aor_str = f'{aor.get("name") or ""} <{stringify_uri(aor["uri"])}>{stringify_params(aor.get("params", {}))}'
+    return aor_str.strip()  # Preferred format as section 7.3.1 of RFC 3261 indicates
 
 
 def stringify_via(all_via: List):
@@ -135,8 +136,12 @@ def prettify_header_name(header_name: str):
 
 
 def stringify_header(header_name, header_data):
+    # First, see if we can transform the header in a simple way, or we
+    # don't know what to do with it (has no stringifier)
     if isinstance(header_data, (str, int)) or header_name not in HEADER_STRINGIFIER_FN.keys():
-        # Simple headers are simple -> just format here
+        if isinstance(header_data, (tuple, list)):
+            header_data = header_data[0]
+
         return f"{prettify_header_name(header_name)}: {header_data}"
 
     # Else, call the stringifier function

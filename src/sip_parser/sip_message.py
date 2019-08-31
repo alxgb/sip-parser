@@ -19,6 +19,21 @@ from .helpers.sip_parsers import (
 
 from .helpers.sip_stringifiers import stringify_header, stringify_uri, prettify_header_name
 
+# These headers MAY appear multiple times in a single message
+MULTI_INSTANCE_HEADER_NAMES = (
+    # MAY appear multiple times, but compressable into a single one with commas
+    "contact",
+    "route",
+    "record-route",
+    "path",
+    "via",
+    # Multi instance, but NOT compressable into a single one
+    "www-authenticate",
+    "authorization",
+    "proxy-authenticate",
+    "proxy-authorization",
+)
+
 
 class SipMessage:
     TYPE_REQUEST = 0
@@ -38,15 +53,64 @@ class SipMessage:
         self.headers: Dict[str, Any] = {}
 
     @classmethod
-    def from_string(cls, data: str):
-        """ Parses a message contained in data and produces
+    def from_dict(cls, data: Dict[str, Any]):
+        """ Creates an instance of the class based off the given data """
+
+        message = cls()
+        message.version = data.get("version")
+        if data.get("status"):
+            # Assume it's a Response message
+            message.type = cls.TYPE_RESPONSE
+            message.status = data.get("status")
+            message.reason = data.get("reason")
+
+            if not message.status or not message.reason:
+                raise RuntimeError("Invalid response message: Expected reason & status")
+
+            if data.get("method") or data.get("uri"):
+                raise RuntimeError(
+                    "Found uri/method (Request) properties alongside status/reason (Response)"
+                )
+
+        else:
+            message.type = cls.TYPE_REQUEST
+            message.method = data.get("method")
+            message.uri = data.get("uri")
+
+            if not message.method or not message.uri:
+                raise RuntimeError("Invalid request message: Expected URI & method")
+
+            if data.get("status") or data.get("reason"):
+                raise RuntimeError(
+                    "Found reason/status (Response) properties alongside uri/method (Request)"
+                )
+
+        message.headers = data.get("headers", {})
+        if not message.headers:
+            raise RuntimeError("Missing message headers")
+
+        if not isinstance(message.headers, dict):
+            raise RuntimeError("The message headers must be listed as a dictionary")
+
+        for header, value in message.headers.items():
+            # Make sure multi-headers are a list/tuple, even if the user provided it flat
+            if header in MULTI_INSTANCE_HEADER_NAMES and not isinstance(value, (list, tuple)):
+                message.headers[header] = (value,)
+
+        message.content = data.get("content", "")
+
+        return message
+
+    @classmethod
+    def from_string(cls, raw_message: str):
+        """ Parses a message contained in raw_message and produces
             a class instance with values based off of it
         """
 
         message = cls()
 
         # Split header/content (header > 2 linebreaks > content)
-        parts = re.match(r"^\s*([\S\s]*?)\r\n\r\n([\S\s]*)$", data)
+        parts = re.match(r"^\s*([\S\s]*?)\r\n\r\n([\S\s]*)$", raw_message)
         if not parts:
             raise RuntimeError(
                 "Invalid SIP message format, couldn't find header/body division (header must be followed by 2 linebreaks)"
@@ -126,18 +190,7 @@ class SipMessage:
         self.headers[name].extend(values)
 
     def add_header_from_str(self, name: str, data: str):
-        # These headers can appear multiple times in a single message
-        if name in (
-            "contact",
-            "route",
-            "record-route",
-            "path",
-            "via",
-            "www-authenticate",
-            "proxy-authenticate",
-            "authorization",
-            "proxy-authorization",
-        ):
+        if name in MULTI_INSTANCE_HEADER_NAMES:
             self.add_multi_header_from_str(name, data)
         elif name in ("to", "from", "refer-to"):
             val, _ = parse_aor(data)
