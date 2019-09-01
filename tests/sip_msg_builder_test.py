@@ -1,5 +1,5 @@
 import textwrap
-from sip_parser.sip_message import SipMessage
+from sip_parser.sip_message import SipMessage, SipBuildError
 import pytest
 
 
@@ -109,7 +109,7 @@ def test_request_params():
 
 
 def test_invalid_request_response_mix():
-    with pytest.raises(RuntimeError, match="^Found.*[Rr]equest.*properties.*[Rr]esponse.*"):
+    with pytest.raises(SipBuildError, match="^Found.*[Rr]equest.*properties.*[Rr]esponse.*"):
         SipMessage.from_dict(
             {
                 "status": 200,
@@ -119,7 +119,7 @@ def test_invalid_request_response_mix():
             }
         )
 
-    with pytest.raises(RuntimeError, match="^Found.*[Rr]esponse.*properties.*[Rr]equest.*"):
+    with pytest.raises(SipBuildError, match="^Found.*[Rr]esponse.*properties.*[Rr]equest.*"):
         SipMessage.from_dict(
             {
                 "method": "GOOD",

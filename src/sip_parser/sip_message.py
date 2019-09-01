@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional, Union
 
 import urllib
 import re
-from .helpers.sip_parsers import (
+from sip_parser.helpers.sip_parsers import (
     COMPACT_HEADERS,
     parse_params,
     parse_multiheader,
@@ -16,8 +16,12 @@ from .helpers.sip_parsers import (
     parse_response,
     parse_request,
 )
-
-from .helpers.sip_stringifiers import stringify_header, stringify_uri, prettify_header_name
+from sip_parser.helpers.sip_stringifiers import (
+    stringify_header,
+    stringify_uri,
+    prettify_header_name,
+)
+from sip_parser.exceptions import SipParseError, SipBuildError
 
 # These headers MAY appear multiple times in a single message
 MULTI_INSTANCE_HEADER_NAMES = (
@@ -65,10 +69,10 @@ class SipMessage:
             message.reason = data.get("reason")
 
             if not message.status or not message.reason:
-                raise RuntimeError("Invalid response message: Expected reason & status")
+                raise SipBuildError("Invalid response message: Expected reason & status")
 
             if data.get("method") or data.get("uri"):
-                raise RuntimeError(
+                raise SipBuildError(
                     "Found uri/method (Request) properties alongside status/reason (Response)"
                 )
 
@@ -78,19 +82,19 @@ class SipMessage:
             message.uri = data.get("uri")
 
             if not message.method or not message.uri:
-                raise RuntimeError("Invalid request message: Expected URI & method")
+                raise SipBuildError("Invalid request message: Expected URI & method")
 
             if data.get("status") or data.get("reason"):
-                raise RuntimeError(
+                raise SipBuildError(
                     "Found reason/status (Response) properties alongside uri/method (Request)"
                 )
 
         message.headers = data.get("headers", {})
         if not message.headers:
-            raise RuntimeError("Missing message headers")
+            raise SipBuildError("Missing message headers")
 
         if not isinstance(message.headers, dict):
-            raise RuntimeError("The message headers must be listed as a dictionary")
+            raise SipBuildError("The message headers must be listed as a dictionary")
 
         for header, value in message.headers.items():
             # Make sure multi-headers are a list/tuple, even if the user provided it flat
@@ -112,7 +116,7 @@ class SipMessage:
         # Split header/content (header > 2 linebreaks > content)
         parts = re.match(r"^\s*([\S\s]*?)\r\n\r\n([\S\s]*)$", raw_message)
         if not parts:
-            raise RuntimeError(
+            raise SipParseError(
                 "Invalid SIP message format, couldn't find header/body division (header must be followed by 2 linebreaks)"
             )
 
@@ -133,7 +137,9 @@ class SipMessage:
             # We couldn't parse it as a response, it must be a request
             request_parsed = parse_request(lines)
             if not request_parsed:
-                raise RuntimeError("Invalid SIP message to parse, neither a response nor a request")
+                raise SipParseError(
+                    "Invalid SIP message to parse, neither a response nor a request"
+                )
 
             message.type = message.TYPE_REQUEST
             message.version = request_parsed["version"]
@@ -144,7 +150,7 @@ class SipMessage:
         for line in lines[1:]:
             header_match = re.match(r"^([\S]*?)\s*:\s*([\s\S]*)$", line)
             if not header_match:
-                raise RuntimeError("Invalid SIP header detected. Parsing line: %s" % line)
+                raise SipParseError("Invalid SIP header detected. Parsing line: %s" % line)
 
             name = urllib.parse.unquote(header_match.group(1)).lower()
             if name in COMPACT_HEADERS:
@@ -177,11 +183,11 @@ class SipMessage:
         ):
             values, data = parse_multiheader(parse_auth_header_with_scheme, raw_val)
         else:
-            raise RuntimeError(f"Don't know how to process header {name} as a multi-header")
+            raise SipParseError(f"Don't know how to process header {name} as a multi-header")
 
         # Make sure there's no leftover data after parsing (either we parsed wrong or the header is invalid, either way - bad)
         if data:
-            raise RuntimeError(f"Leftover data found after processing {name} header")
+            raise SipParseError(f"Leftover data found after processing {name} header")
 
         # If we hadn't found this header before, create it. Otherwise, append to it
         if name not in self.headers:
