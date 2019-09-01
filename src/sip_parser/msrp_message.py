@@ -9,6 +9,8 @@ class MsrpParseError(Exception):
 
 
 class MsrpMessage:
+    """ MSRP message parser following RFC4975 """
+
     def __init__(self):
         self.id = ""
         self.method = ""
@@ -20,6 +22,7 @@ class MsrpMessage:
     @classmethod
     def from_string(cls, raw_message: str):
         """ Generate a MsrpMessage structure based on a given message """
+
         lines = [line.strip() for line in raw_message.split("\n")]
         message = cls()
 
