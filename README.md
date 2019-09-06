@@ -11,7 +11,7 @@ Anyone's free to fork this and use it as a starting point for their own parser/n
 
 ## API basics
 
-The primary classes exposed by the library are `SipMessage` and `SdpMessage`. Their usage is fairly straight forward, simply call the static function `cls.from_string(<msg_str>)` and that will parse the provided message. An exception will be thrown if the message is considered malformed. `SipMessage` works slightly differently, first create an instance of it and then call `parse(<msg_str>)`. This will update the `SipMessage` object fields accordingly.
+The primary classes exposed by the library are `SipMessage` and `SdpMessage`. Their usage is fairly straight forward, simply call the static function `cls.from_string(<msg_str>)` and that will parse the provided message. An exception will be thrown if the message is considered malformed.
 
 ## Examples
 
