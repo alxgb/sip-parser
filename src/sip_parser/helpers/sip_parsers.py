@@ -164,7 +164,6 @@ def parse_uri(uri: str):
             else:
                 # The param has no specific value (e.g loose routing indicator, ;lr)
                 params[param_m.group(1)] = None
-    print("GOT PARAMS:", params)
     # Extract headers
     headers: Dict[str, str] = {}
     if m.group(7):
