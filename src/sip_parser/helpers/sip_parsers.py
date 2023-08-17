@@ -149,7 +149,7 @@ def parse_aor(data: str):
 def parse_uri(uri: str):
     """ Breaks down a URI into its different components """
     m = re.match(
-        r"^(sips?):(?:([^\s>:@]+)(?::([^\s@>]+))?@)?([\w\-\.]+)(?::(\d+))?((?:;[^\s=\?>;]+(?:=[^\s?\;]+)?)*)(?:\?(([^\s&=>]+=[^\s&=>]+)(&[^\s&=>]+=[^\s&=>]+)*))?$",
+        r"^(sips?):(?:([^\s>:@]+)(?::([^\s@>]+))?@)?([\w\-\.]+|\[[0-9a-fA-F:]+\])(?::(\d+))?((?:;[^\s=\?>;]+(?:=[^\s?\;]+)?)*)(?:\?(([^\s&=>]+=[^\s&=>]+)(&[^\s&=>]+=[^\s&=>]+)*))?$",
         uri,
     )
     if not m:
@@ -158,13 +158,13 @@ def parse_uri(uri: str):
     # Extract params
     params: Dict[str, Optional[str]] = {}
     if m.group(6):
-        for param_m in re.finditer(r"([^;=]+)(=([^;=]+))?", m.group(6)):
-            if m.group(2):
+        for param_m in re.finditer(r"([^;=]+)(?:=([^;=]+))?", m.group(6)):
+            if param_m.group(2):
                 params[param_m.group(1)] = param_m.group(2)
             else:
                 # The param has no specific value (e.g loose routing indicator, ;lr)
                 params[param_m.group(1)] = None
-
+    print("GOT PARAMS:", params)
     # Extract headers
     headers: Dict[str, str] = {}
     if m.group(7):
