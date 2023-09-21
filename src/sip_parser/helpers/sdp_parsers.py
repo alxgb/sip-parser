@@ -63,7 +63,6 @@ def parse_media_attributes(value):
     subfields = value.split(":")
     if len(subfields) > 1:
         return (subfields[0], subfields[1])
-
     # Otherwise, it's a property attribute
     return (value, True)
 
@@ -81,4 +80,5 @@ parse_functions = {
     "e": lambda val: val,
     "p": lambda val: val,
     "c": lambda val: ConnectionDataField(*val.split(" ")),
+    "b": lambda val: val,
 }
