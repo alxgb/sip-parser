@@ -22,9 +22,13 @@ def parse_params(data):
     """ Parse the parameters of the header, separated by semicolons (;) """
 
     params = {}
+    # NOTE: originally the pattern used here was
+    # r'\s*;\s*([\w\-.!%*_+`\'~]+)(?:\s*=\s*([\w\-.!%*_+`\'~]+|"[^"\\]*(\\.[^"\\]*)*"))?'
+    # which did not allow to have parameter values which contain a colon like IP6 addresses
+    # Added a colon to the allowed characters in the parameter value
     while True:
         m = re.match(
-            r'\s*;\s*([\w\-.!%*_+`\'~]+)(?:\s*=\s*([\w\-.!%*_+`\'~]+|"[^"\\]*(\\.[^"\\]*)*"))?',
+            r'\s*;\s*([\w\-.!%*_+`\'~]+)(?:\s*=\s*([\w\-.!%*_+:`\'~]+|"[^"\\]*(\\.[^"\\]*)*"))?',
             data,
         )
         if not m:  # We're done matching
@@ -34,6 +38,7 @@ def parse_params(data):
         data = data[m.end() :]
 
     # Return the list of parameters AND the leftover data
+    # print("DEBUG: parse_params: params=", params, "data=", data)
     return params, data
 
 
@@ -62,7 +67,16 @@ def parse_multiheader(parse_fn: Callable, data: str) -> Tuple[List, str]:
 
 
 def parse_via(data: str):
-    m = re.match(r"SIP\s*\/\s*(\d+\.\d+)\s*\/\s*([\S]+)\s+([^\s;:]+)(?:\s*:\s*(\d+))?", data)
+
+    pat_ip4 = r"(?:\d{1,3}\.){3}\d{1,3}"
+    pat_ip6 = r"\[[0-9a-fA-F:]+\]"   # just to recognize, not to validate
+    pat_hname = r"(?:[a-zA-Z0-9\-_]+\.)+[a-zA-Z0-9\-_]+"
+
+    # OLD CODE: did not recognize IPv6 addresses
+    # m = re.match(r"SIP\s*\/\s*(\d+\.\d+)\s*\/\s*([\S]+)\s+([^\s;:]+)(?:\s*:\s*(\d+))?", data)
+
+    # NEW CODE: replace group 3 with recognizing either pat_ip4 or pat_ip6
+    m = re.match(r"SIP\s*\/\s*(\d+\.\d+)\s*\/\s*([\S]+)\s+((?:%s|%s|%s))(?:\s*:\s*(\d+))?" % (pat_ip4, pat_ip6, pat_hname), data)
     if not m:
         raise RuntimeError("Could not parse Via header!")
 
@@ -74,7 +88,7 @@ def parse_via(data: str):
         "port": int(m.group(4)) if m.group(4) else None,
         "params": params,
     }
-
+    # print("DEBUG: parse_via: val=", val, "data=", data)
     return val, data
 
 
