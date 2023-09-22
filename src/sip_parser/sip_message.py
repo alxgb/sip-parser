@@ -187,7 +187,7 @@ class SipMessage:
 
         # Make sure there's no leftover data after parsing (either we parsed wrong or the header is invalid, either way - bad)
         if data:
-            raise SipParseError(f"Leftover data found after processing {name} header")
+            raise SipParseError(f"Leftover data found after processing {name} header: {data}")
 
         # If we hadn't found this header before, create it. Otherwise, append to it
         if name not in self.headers:
