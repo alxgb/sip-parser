@@ -6,7 +6,7 @@ from sip_parser.exceptions import SdpParseError
 from sip_parser.helpers.sdp_parsers import parse_functions
 from sip_parser.sdp_fields import FieldRaw, TimeDescription, MediaDescription
 
-REPEATABLE_HEADER_NAMES = ("b", "r", "a")
+REPEATABLE_HEADER_NAMES = ("b", "r", "a",)
 
 
 class SdpMessage:
@@ -33,7 +33,7 @@ class SdpMessage:
     @staticmethod
     def from_string(raw_message: str):
         sdp_msg = SdpMessage()
-        lines = [line.strip().split("=", maxsplit=1) for line in raw_message.split("\n")]
+        lines = [line.strip().split("=", maxsplit=1) for line in raw_message.splitlines()]
 
         fields_order = ""
         fields = []
@@ -84,10 +84,9 @@ class SdpMessage:
             for i, field in enumerate(media_desc_fields):
                 target_key = target_attr_map[field.name]
                 processed_value = parse_functions[field.name](field.value)
-                if target_key in REPEATABLE_HEADER_NAMES:
+                if field.name in REPEATABLE_HEADER_NAMES:
                     if cur_media_desc_attrs[target_key] is None:
                         cur_media_desc_attrs[target_key] = []
-
                     cur_media_desc_attrs[target_key].append(processed_value)
                 else:
                     cur_media_desc_attrs[target_key] = processed_value
